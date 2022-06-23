@@ -807,9 +807,17 @@ ${commands}
 
 export default {
   up: async (queryInterface: Sequelize.QueryInterface) => {
-    for (const command of migrationCommands) {
-      console.log("Execute: " + command.fn);
-      await queryInterface[command.fn](...command.params);
+    const t = await queryInterface.sequelize.transaction();
+    try {
+      for (const command of migrationCommands) {
+        console.log("Execute: " + command.fn);
+        await queryInterface[command.fn](...command.params, { transaction: t });
+      }
+      await t.commit();
+    } catch (error) {
+      console.error("Rolling back: " + error);
+      await t.rollback();
+      throw error;
     }
   },
   info: info,
